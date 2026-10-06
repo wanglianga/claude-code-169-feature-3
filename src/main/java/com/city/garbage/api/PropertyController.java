@@ -4,12 +4,14 @@ import com.city.garbage.api.dto.AssignTaskRequest;
 import com.city.garbage.api.dto.CompleteTaskRequest;
 import com.city.garbage.api.dto.ComplaintReplyRequest;
 import com.city.garbage.api.dto.ComplaintRequest;
+import com.city.garbage.api.dto.RectificationReportRequest;
 import com.city.garbage.domain.*;
 import com.city.garbage.repo.AlertRepository;
 import com.city.garbage.repo.ComplaintRepository;
 import com.city.garbage.repo.GovernanceCaseRepository;
 import com.city.garbage.service.ComplaintService;
 import com.city.garbage.service.DisposalService;
+import com.city.garbage.service.OdorRectificationService;
 import com.city.garbage.service.WorkTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +31,7 @@ public class PropertyController {
     private final WorkTaskService taskService;
     private final ComplaintService complaintService;
     private final DisposalService disposalService;
+    private final OdorRectificationService odorRectificationService;
     private final AlertRepository alertRepository;
     private final GovernanceCaseRepository caseRepository;
     private final ComplaintRepository complaintRepository;
@@ -103,5 +106,24 @@ public class PropertyController {
     public java.util.Map<String, Object> reconcilePoints() {
         int fixed = disposalService.settlePendingPoints();
         return java.util.Map.of("settledCount", fixed);
+    }
+
+    @Operation(summary = "进行中的异味整改单（待整改/观察期）")
+    @GetMapping("/odor-rectifications")
+    public List<OdorRectification> activeOdorRectifications() {
+        return odorRectificationService.activeList();
+    }
+
+    @Operation(summary = "异味整改单详情（含整改回执、异味曲线、观察期统计）")
+    @GetMapping("/odor-rectifications/{id}")
+    public java.util.Map<String, Object> odorRectificationDetail(@PathVariable Long id) {
+        return odorRectificationService.detailView(id);
+    }
+
+    @Operation(summary = "提交异味整改反馈：上传整改照片与设备读数，登记整改责任人与复查时间（同步街道端），整改单进入观察期")
+    @PostMapping("/odor-rectifications/{id}/report")
+    public OdorRectification reportOdorRectification(@PathVariable Long id,
+                                                     @Valid @RequestBody RectificationReportRequest req) {
+        return odorRectificationService.submitReport(id, req);
     }
 }

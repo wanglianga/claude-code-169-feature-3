@@ -29,6 +29,7 @@ public class DeviceIngestService {
     private final TruckVisitRepository visitRepository;
     private final DeviceEventLogRepository logRepository;
     private final LinkageEngine engine;
+    private final OdorRectificationService odorRectificationService;
     private final LinkageProperties props;
     private final TimeService timeService;
     private final ObjectMapper objectMapper;
@@ -104,10 +105,14 @@ public class DeviceIngestService {
         Integer odor = e.getOdorValue();
         if (odor == null) return;
         room.setCurrentOdor(odor);
+        // 每次上报都记入异味曲线，供街道端观察整改前后异味是否下降
+        odorRectificationService.recordReading(room.getCode(), odor, ReadingSource.DEVICE, null);
         if (odor >= props.getOdorThreshold()) {
             engine.raiseAlert(room, AlertType.ODOR, AlertSeverity.HIGH,
                     "异味传感器读数 " + odor + "，超过阈值 " + props.getOdorThreshold(),
                     "ODOR:" + room.getCode(), null, null);
+            // 一周内多次超标 -> 生成异味反复整改单（消杀/桶体清洗/排风检查/清运复盘）
+            odorRectificationService.onOdorExceedance(room, odor);
         } else {
             // 异味缓解只解除传感器告警；投诉类告警须由物业整改反馈解除
             engine.resolveByType(room.getCode(), AlertType.ODOR, "异味读数回落至 " + odor);

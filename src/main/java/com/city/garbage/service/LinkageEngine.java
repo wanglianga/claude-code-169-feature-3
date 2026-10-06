@@ -120,6 +120,17 @@ public class LinkageEngine {
                     "清运离场后超过" + props.getNotCleanedMinutes() + "分钟未清洁，立即补做清洁", alert.getId());
             case POINTS_UNSETTLED -> createTask(gc, TaskType.RECTIFY, "PROPERTY", 45,
                     "投放积分未到账，核对称重/摄像头数据并补录积分", alert.getId());
+            case ODOR_RECURRING -> {
+                // 异味反复超标：消杀 + 桶体清洗 + 排风设备检查 + 清运频次复盘
+                createTask(gc, TaskType.DISINFECTION, "PROPERTY", 70,
+                        "异味反复超标，先消杀控制", alert.getId());
+                createTask(gc, TaskType.BIN_DEEP_CLEAN, "PROPERTY", 65,
+                        "桶体深度清洗，去除残留渗液", alert.getId());
+                createTask(gc, TaskType.EXHAUST_CHECK, "PROPERTY", 72,
+                        "检查排风设备运行状态与风量", alert.getId());
+                createTask(gc, TaskType.COLLECTION_REVIEW, "PROPERTY", 58,
+                        "复盘清运频次是否满足垃圾产生量", alert.getId());
+            }
         }
     }
 

@@ -15,6 +15,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     long countByCommunityIdAndCreatedAtBetween(Long communityId, OffsetDateTime from, OffsetDateTime to);
     long countByCommunityIdAndStatusAndCreatedAtBetween(Long communityId, ComplaintStatus status,
                                                         OffsetDateTime from, OffsetDateTime to);
+    long countByRoomCodeAndTypeAndCreatedAtAfter(String roomCode, String type, OffsetDateTime after);
 
     @Query("select coalesce(sum(case when c.status = com.city.garbage.domain.ComplaintStatus.RESOLVED then 1 else 0 end),0) " +
             "from Complaint c where c.communityId = :cid and c.createdAt between :from and :to")
