@@ -1,6 +1,7 @@
 package com.city.garbage.api;
 
 import com.city.garbage.api.dto.AssignTaskRequest;
+import com.city.garbage.api.dto.CompleteRectificationRequest;
 import com.city.garbage.api.dto.CompleteTaskRequest;
 import com.city.garbage.api.dto.ComplaintReplyRequest;
 import com.city.garbage.api.dto.ComplaintRequest;
@@ -10,6 +11,7 @@ import com.city.garbage.repo.ComplaintRepository;
 import com.city.garbage.repo.GovernanceCaseRepository;
 import com.city.garbage.service.ComplaintService;
 import com.city.garbage.service.DisposalService;
+import com.city.garbage.service.OdorRectificationService;
 import com.city.garbage.service.WorkTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +31,7 @@ public class PropertyController {
     private final WorkTaskService taskService;
     private final ComplaintService complaintService;
     private final DisposalService disposalService;
+    private final OdorRectificationService rectificationService;
     private final AlertRepository alertRepository;
     private final GovernanceCaseRepository caseRepository;
     private final ComplaintRepository complaintRepository;
@@ -103,5 +106,34 @@ public class PropertyController {
     public java.util.Map<String, Object> reconcilePoints() {
         int fixed = disposalService.settlePendingPoints();
         return java.util.Map.of("settledCount", fixed);
+    }
+
+    @Operation(summary = "异味反复整改单列表（可按垃圾房过滤）")
+    @GetMapping("/odor-rectifications")
+    public List<OdorRectification> rectifications(@RequestParam(required = false) String roomCode) {
+        return rectificationService.list(roomCode);
+    }
+
+    @Operation(summary = "整改单详情（含消杀/桶体清洗/排风检查/清运复盘任务清单）")
+    @GetMapping("/odor-rectifications/{rectNo}")
+    public java.util.Map<String, Object> rectificationDetail(@PathVariable String rectNo) {
+        return java.util.Map.of(
+                "rectification", rectificationService.get(rectNo),
+                "tasks", rectificationService.tasksOf(rectNo));
+    }
+
+    @Operation(summary = "完成整改：上传照片与设备读数、登记责任人，进入观察期（复查时间同步街道端）")
+    @PostMapping("/odor-rectifications/{rectNo}/complete")
+    public OdorRectification completeRectification(@PathVariable String rectNo,
+                                                   @Valid @RequestBody CompleteRectificationRequest req) {
+        return rectificationService.complete(rectNo, req.ownerName(), req.photos(),
+                req.deviceReading(), req.reviewAt(), req.note());
+    }
+
+    @Operation(summary = "立即评估所有观察期整改单（到期无超标闭环、仍超标升级；默认由定时巡检执行）")
+    @PostMapping("/odor-rectifications/evaluate-observations")
+    public java.util.Map<String, Object> evaluateObservations() {
+        int evaluated = rectificationService.evaluateObservations();
+        return java.util.Map.of("evaluatedCount", evaluated);
     }
 }

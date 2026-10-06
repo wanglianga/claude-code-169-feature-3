@@ -54,6 +54,10 @@ public class WorkTask {
     /** 关联告警 id，告警解除时可自动完成任务 */
     private Long alertId;
 
+    /** 关联异味反复整改单号（整改类任务挂单到整改单，普通联动任务为空） */
+    @Column(name = "rect_no", length = 40)
+    private String rectNo;
+
     private OffsetDateTime createdAt;
     private OffsetDateTime assignedAt;
     private OffsetDateTime doneAt;

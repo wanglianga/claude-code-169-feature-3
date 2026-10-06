@@ -29,6 +29,7 @@ public class DeviceIngestService {
     private final TruckVisitRepository visitRepository;
     private final DeviceEventLogRepository logRepository;
     private final LinkageEngine engine;
+    private final OdorRectificationService odorRectificationService;
     private final LinkageProperties props;
     private final TimeService timeService;
     private final ObjectMapper objectMapper;
@@ -104,6 +105,8 @@ public class DeviceIngestService {
         Integer odor = e.getOdorValue();
         if (odor == null) return;
         room.setCurrentOdor(odor);
+        // 读数留痕进异味曲线；一周内多次超标自动开整改单，观察期再超标自动升级
+        odorRectificationService.recordReading(room, odor);
         if (odor >= props.getOdorThreshold()) {
             engine.raiseAlert(room, AlertType.ODOR, AlertSeverity.HIGH,
                     "异味传感器读数 " + odor + "，超过阈值 " + props.getOdorThreshold(),

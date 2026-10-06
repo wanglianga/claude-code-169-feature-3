@@ -5,6 +5,7 @@ import com.city.garbage.domain.AlertStatus;
 import com.city.garbage.domain.AlertType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,6 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findByRoomCodeAndStatusIn(String roomCode, List<AlertStatus> statuses);
     List<Alert> findByCaseNo(String caseNo);
     List<Alert> findByTypeAndStatus(AlertType type, AlertStatus status);
+    long countByRoomCodeAndTypeInAndCreatedAtBetween(String roomCode, List<AlertType> types,
+                                                     OffsetDateTime from, OffsetDateTime to);
 }

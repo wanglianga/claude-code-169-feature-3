@@ -20,4 +20,10 @@ public class LinkageProperties {
     private int notCleanedMinutes = 15;
     /** 积分待结算超过多少秒视为“积分未到账” */
     private int unsettledSeconds = 60;
+    /** 异味反复整改：统计窗口（天），窗口内超标次数达到阈值即开整改单 */
+    private int odorRepeatWindowDays = 7;
+    /** 异味反复整改：窗口内超标次数阈值（含本次） */
+    private int odorRepeatThreshold = 3;
+    /** 整改完成后默认观察期（天），复查时间=完成时间+观察期 */
+    private int odorObserveDays = 3;
 }

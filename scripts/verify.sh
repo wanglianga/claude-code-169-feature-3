@@ -61,9 +61,40 @@ CID=$(post /api/resident/complaints '{"contact":"13800000000","roomCode":"ROOM2"
 post "/api/property/complaints/$CID/reply" '{"reply":"已安排保洁消杀"}' >/dev/null
 echo "    街道质量视图: $(curl -s "$B/api/street/overview?days=7" | python3 -c 'import sys,json;d=json.load(sys.stdin);print([(x["communityName"],x["correctRatePct"],x["complaintCount"]) for x in d])')"
 
+echo "==> [3.5] 异味反复整改演练（ROOM3）"
+# 完成当前全部物业待办的辅助函数（消杀完成会联动销警并自动完成关联任务）
+complete_all_pending() {
+  for _ in 1 2 3 4 5; do
+    IDS=$(curl -s "$B/api/property/tasks/pending" | python3 -c 'import sys,json;print(" ".join(str(t["id"]) for t in json.load(sys.stdin)))')
+    [ -z "$IDS" ] && break
+    for TID in $IDS; do post "/api/property/tasks/$TID/complete" '{"note":"已处理"}' >/dev/null; done
+  done
+}
+# 1) 一周内 3 次异味超标 -> 自动开整改单（消杀/桶体清洗/排风检查/清运复盘）
+post /api/device/events '{"eventType":"ODOR","roomCode":"ROOM3","odorValue":75}' >/dev/null
+post /api/device/events '{"eventType":"ODOR","roomCode":"ROOM3","odorValue":80}' >/dev/null
+post /api/device/events '{"eventType":"ODOR","roomCode":"ROOM3","odorValue":85}' >/dev/null
+RECT=$(curl -s "$B/api/property/odor-rectifications?roomCode=ROOM3" | python3 -c 'import sys,json;print(json.load(sys.stdin)[0]["rectNo"])')
+echo "    整改单: $RECT 任务: $(curl -s "$B/api/property/odor-rectifications/$RECT" | python3 -c 'import sys,json;print([t["type"] for t in json.load(sys.stdin)["tasks"]])')"
+# 2) 物业完成整改任务并上传照片+设备读数 -> 观察期，责任人与复查时间同步街道端
+complete_all_pending
+post "/api/property/odor-rectifications/$RECT/complete" '{"ownerName":"陈保洁","photos":["wash1.jpg","vent1.jpg"],"deviceReading":45,"note":"已消杀、清洗桶体并检修排风"}' >/dev/null
+echo "    街道端可见: $(curl -s "$B/api/street/odor-rectifications?roomCode=ROOM3" | python3 -c 'import sys,json;d=json.load(sys.stdin)[0];print(d["status"],"责任人",d["ownerName"],"复查时间",d["reviewAt"])')"
+# 3) 观察期再超标 -> 升级深度排查（建议排风/桶体密封/清运频次，而非重复消杀）
+post /api/device/events '{"eventType":"ODOR","roomCode":"ROOM3","odorValue":82}' >/dev/null
+echo "    升级建议: $(curl -s "$B/api/street/odor-rectifications?roomCode=ROOM3" | python3 -c 'import sys,json;print(json.load(sys.stdin)[0]["suggestion"])')"
+# 4) 深度整改后复查时间到期 -> 评估闭环
+complete_all_pending
+NOW=$(python3 -c 'from datetime import datetime,timezone,timedelta;print(datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds"))')
+post "/api/property/odor-rectifications/$RECT/complete" "{\"ownerName\":\"陈保洁\",\"photos\":[\"seal1.jpg\"],\"deviceReading\":40,\"reviewAt\":\"$NOW\",\"note\":\"已更换密封条并上调清运班次\"}" >/dev/null
+post /api/property/odor-rectifications/evaluate-observations '{}' >/dev/null
+RECT_STATUS=$(curl -s "$B/api/street/odor-rectifications?roomCode=ROOM3" | python3 -c 'import sys,json;print(json.load(sys.stdin)[0]["status"])')
+echo "    复查到期评估后整改单状态: $RECT_STATUS（应为 CLOSED_EFFECTIVE）"
+echo "    异味曲线: $(curl -s "$B/api/street/rooms/ROOM3/odor-curve?days=7" | python3 -c 'import sys,json;d=json.load(sys.stdin);print("读数",[r["value"] for r in d["readings"]],"阈值",d["odorThreshold"])')"
+
 echo "==> [4/4] 结果判定"
-if [ "$ACTIVE" = "None" ] && [ "$PENDING" = "0" ]; then
-  echo "PASS: 告警合并 -> 多角色任务 -> 积分退还 -> 清运清洁 -> 联动单闭环 全部验证通过"
+if [ "$ACTIVE" = "None" ] && [ "$PENDING" = "0" ] && [ "$RECT_STATUS" = "CLOSED_EFFECTIVE" ]; then
+  echo "PASS: 告警合并 -> 多角色任务 -> 积分退还 -> 清运清洁 -> 联动单闭环 -> 异味反复整改闭环 全部验证通过"
 else
-  echo "FAIL: activeCaseNo=$ACTIVE pendingTasks=$PENDING"; exit 1
+  echo "FAIL: activeCaseNo=$ACTIVE pendingTasks=$PENDING rectStatus=$RECT_STATUS"; exit 1
 fi

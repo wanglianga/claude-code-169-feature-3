@@ -46,6 +46,9 @@ app:
     odor-threshold: 70         # 异味值 >= 70 视为异味告警
     points-per-kg: 10          # 正确投放每公斤积分
     wrong-sort-deduction: 5    # 错投扣减积分（不低于0）
+    odor-repeat-window-days: 7   # 异味反复整改：统计窗口（天）
+    odor-repeat-threshold: 3     # 窗口内超标次数达到该值即开整改单
+    odor-observe-days: 3         # 整改完成后观察期（天），复查时间=完成时间+观察期
 
 management:
   endpoints:

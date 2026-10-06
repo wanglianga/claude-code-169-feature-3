@@ -14,6 +14,7 @@ public interface WorkTaskRepository extends JpaRepository<WorkTask, Long> {
     List<WorkTask> findByAssigneeRoleAndStatusNotOrderByPriorityDescCreatedAtAsc(String role, TaskStatus status);
     List<WorkTask> findByAssigneeRoleAndTypeAndStatusNotOrderByPriorityDescCreatedAtAsc(String role, TaskType type, TaskStatus status);
     List<WorkTask> findByCaseNo(String caseNo);
+    List<WorkTask> findByRectNo(String rectNo);
     long countByCaseNoAndStatus(String caseNo, TaskStatus status);
     long countByCaseNoAndStatusIn(String caseNo, List<TaskStatus> statuses);
 }
